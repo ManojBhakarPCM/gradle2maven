@@ -33,7 +33,7 @@ class bcolors:
 # =============================== Options =======================================
 opt_copySrc = True;
 opt_copyRes = True;
-opt_copyTest = True;
+opt_copyTest = False;
 # =============================== Functions =====================================
 
 
@@ -70,7 +70,7 @@ def addd(name):
     return outt
 
 def copyDEP(filepath):
-    regex = "'([\w\d\.\-\_]+:[\w\d\.\-\_]+:[\w\d\.\-\_]+)'"
+    regex = "['\"]+([\w\d\.\-\_]+:[\w\d\.\-\_]+:[\w\d\.\-\_\$\{\}]+)['\"]+"
     data = ""
     ret = ""
     f = open(filepath,'r', encoding='utf-8')
@@ -86,7 +86,27 @@ def copyDEP(filepath):
            ret += addd(r)
     return ret
 
-
+def collectProps(filepath):
+    global gprops
+    data = ""
+    f = open(filepath,'r', encoding='utf-8')
+    try:
+        data=f.read()
+        f.close()
+    except:
+        print(f"{bcolors.FAIL}Error: cant open build.properties{bcolors.ENDC}")
+        return ""
+    lines = data.split('\n')
+    for l in lines:
+        l = l.strip()
+        if l=="":
+            continue
+        if "=" in l:
+            pdata = l.split("=")
+            key = pdata[0]
+            val = pdata[1]
+            gprops[key] = val
+        #gprops[pdata[0]] = pdata[1]
 
 
 root = Tk() # pointing root to Tk() to use it as Tk() in program.
@@ -115,11 +135,17 @@ xml = '<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.
 #pattern = '(\-?\d{8,20}L)\)'
 pattern = 'package\s(.*);\n'
 
+gprops = dict()
+
 for root, dirs, files in walk(rootpath):
     for name in files:
         filepath = os.path.join(root, name)
         if name == 'build.gradle':
             xml += copyDEP(filepath)
+            continue
+        
+        if name == 'gradle.properties':
+            collectProps(filepath)
             continue
         
         if filepath.endswith(".jar") and "\\libs\\" in filepath:
@@ -158,7 +184,11 @@ for root, dirs, files in walk(rootpath):
         result = re.findall(pattern, data)
         if len(result)>0:
             copySRC(src_folder,result[0],filepath)
+            
+for key,val in gprops.items():
+    xml = xml.replace("${" + key + "}",val)
 fo = open(project_path + "\\pom.xml", "w")
 fo.write(xml + "</dependencies>\n</project>")
 fo.close()
+print(gprops)
 #os.startfile(desktopPath_no_slash + "/pythonSearchOutput.txt")
