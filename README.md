@@ -1,5 +1,7 @@
 # gradle2maven
 
+A Script to Convert Gradle Java Project Folder to Maven Java Project
+
 Necessity is the mother of invention !!
 
 THE NECESSITY::
